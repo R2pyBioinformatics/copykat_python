@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "copykat_py"
+version = "1.1.0+b7a4763"
+description = "Python port of the R copykat package"
+requires-python = ">=3.10"
+license = "Artistic-2.0"
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+    "matplotlib>=3.7",
+    "pyarrow>=12.0",
+    "joblib>=1.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff"]
+docs = ["mkdocs", "mkdocstrings[python]", "mkdocs-material", "mkdocs-jupyter"]
+
+[tool.hatch.build.targets.sdist]
+include = ["copykat/", "tutorials/", "tests/", "validation/"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["copykat"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
