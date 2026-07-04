@@ -1,0 +1,64 @@
+id: copykat.cna_mcmc
+import_path: copykat.segmentation.cna_mcmc
+kind: function
+signature: "cna_mcmc(clu: np.ndarray, fttmat: np.ndarray, bins: int, cut_cor:
+  float, n_cores: int = 1) -> SegmentationResult"
+purpose: MCMC-based copy number segmentation -- find breakpoints from per-cluster
+  median profiles, then re-estimate a flat value per segment independently
+  for every cell.
+description: >
+  Step 1: computes each cluster's per-gene median profile (exponentiated back
+  from log space). Step 2: scans fixed-width windows of size ``bins`` and, for
+  each adjacent window pair, samples Poisson-Gamma posteriors
+  (``_mc_poisson_gamma``, matching R's MCMCpack::MCpoissongamma) and runs a
+  two-sample KS test; a window boundary becomes a breakpoint when the KS
+  statistic exceeds ``cut_cor``. Step 3: for every individual cell (not just
+  cluster medians), re-samples the Poisson-Gamma posterior within each final
+  segment and assigns that segment's mean posterior value to all genes in it,
+  then takes the log. Breakpoint positions in the returned SegmentationResult
+  are 1-indexed (R convention), always including 1 and n. ``copykat()`` calls
+  this up to 3 times, halving/quartering ``cut_cor`` if fewer than 25
+  breakpoints are found, before raising ValueError.
+parameters:
+  - name: clu
+    type: np.ndarray
+    required: true
+    description: Cluster assignment per cell (1-indexed).
+  - name: fttmat
+    type: np.ndarray
+    required: true
+    description: Log-scale normalized expression matrix (n_genes, n_cells).
+  - name: bins
+    type: int
+    required: true
+    description: Window size in genes per segment (copykat()'s win_size).
+  - name: cut_cor
+    type: float
+    required: true
+    description: KS-statistic cutoff for calling a breakpoint (0-1; copykat()'s
+      KS_cut).
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Number of parallel workers (joblib) used to segment cells.
+mutates: "execution_class=pure_function; does not mutate fttmat; returns_kind=new_object"
+returns: "SegmentationResult(log_cna: (n_genes, n_cells) log-space segmented
+  matrix, breaks: sorted 1-indexed breakpoint positions including 1 and n)."
+requires: []
+writes: []
+examples:
+  - result = copykat.cna_mcmc(cl_aligned, norm_mat_relat, bins=25, cut_cor=0.1,
+    n_cores=1)
+failure_fixes:
+  - when: len(result.breaks) < 25 (too few breakpoints detected)
+    suggest:
+      - lower cut_cor and re-call cna_mcmc (copykat() itself retries at 50%
+        then 25% of the original KS_cut before raising ValueError)
+      - use a smaller win_size (bins) so more windows are scanned
+    explanation: cna_mcmc itself never raises for a low breakpoint count; only
+      copykat() checks len(results.breaks) < 25 and re-invokes cna_mcmc with
+      a smaller cut_cor, ultimately raising after three attempts.
+related:
+  - copykat.SegmentationResult
+  - copykat.copykat

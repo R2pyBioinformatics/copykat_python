@@ -1,0 +1,41 @@
+id: copykat.BaselineResult
+import_path: copykat.baseline.BaselineResult
+kind: class
+signature: "BaselineResult(basel: np.ndarray, wns: str, pre_n: list[str], cl:
+  np.ndarray)"
+purpose: Dataclass returned by baseline_norm_cl / baseline_gmm holding the
+  detected diploid baseline profile and confidence metadata.
+description: >
+  Plain @dataclass (all fields required positionally or by keyword, no
+  defaults). ``wns == ""`` means the baseline detection was confident;
+  ``wns == "unclassified.prediction"`` means low confidence, which triggers
+  ``copykat()`` to retry with baseline_gmm and later marks predictions with
+  the "low.conf" suffix.
+parameters:
+  - name: basel
+    type: np.ndarray
+    required: true
+    description: Baseline copy number profile (per-gene medians/means of diploid
+      cells).
+  - name: wns
+    type: str
+    required: true
+    description: '"" (confident) or "unclassified.prediction" (low confidence).'
+  - name: pre_n
+    type: list[str]
+    required: true
+    description: Names of predicted normal (diploid) cells.
+  - name: cl
+    type: np.ndarray
+    required: true
+    description: Cluster assignment (1-indexed) for all input cells.
+mutates: "execution_class=data_container; immutable dataclass instance; returns_kind=new_object"
+returns: ""
+requires: []
+writes: []
+examples:
+  - result.basel; result.wns; result.pre_n; result.cl
+failure_fixes: []
+related:
+  - copykat.baseline_norm_cl
+  - copykat.baseline_gmm

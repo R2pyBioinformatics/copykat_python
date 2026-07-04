@@ -1,0 +1,52 @@
+id: copykat.annotate_genes
+import_path: copykat.annotate.annotate_genes
+kind: function
+signature: "annotate_genes(mat: pd.DataFrame, id_type: str = 'S', genome: str
+  = 'hg20') -> pd.DataFrame"
+purpose: Annotate a gene-by-cell expression matrix with genomic coordinates
+  by joining against the bundled hg38/mm10 gene annotation table.
+description: >
+  Matches ``mat``'s row index (gene symbols when ``id_type="S"``, Ensembl IDs
+  when ``id_type` starts with "E") against ``load_gene_annotations(genome)``,
+  keeps only genes with a matching identifier (duplicate symbols in the
+  annotation table are dropped via ``drop_duplicates``), and prepends
+  annotation columns to the matching expression rows. Genes with no match
+  (e.g. unrecognized symbols) are silently dropped -- this is an internal
+  building block called by ``copykat()`` (step 2 of its pipeline) and is
+  also independently importable.
+parameters:
+  - name: mat
+    type: pd.DataFrame
+    required: true
+    description: Expression matrix, gene IDs as row index, cells as columns.
+  - name: id_type
+    type: str
+    required: false
+    default: S
+    description: "'S' for gene symbols (HGNC/MGI), 'E' for Ensembl IDs."
+  - name: genome
+    type: str
+    required: false
+    default: hg20
+    description: "'hg20' (hg38) for human, 'mm10' for mouse."
+mutates: "execution_class=transform; does not mutate mat in place, returns a
+  new concatenated DataFrame; returns_kind=new_object"
+returns: >-
+  pd.DataFrame: annotation columns (abspos, chromosome_name, start_position,
+  end_position, ensembl_gene_id, hgnc_symbol/mgi_symbol, band) prepended to
+  the subset of mat's columns whose gene id matched the annotation table.
+  Row order follows mat's original row order, not genomic order (copykat()
+  sorts by abspos itself afterward).
+requires: []
+writes: []
+examples:
+  - anno_mat = copykat.annotate_genes(rawmat, id_type="S", genome="hg20")
+failure_fixes:
+  - when: "ValueError: Unsupported genome: '<value>'. Use 'hg20' or 'mm10'."
+    suggest:
+      - pass genome="hg20" or genome="mm10"
+    explanation: propagated from load_gene_annotations, which annotate_genes
+      calls internally.
+related:
+  - copykat.copykat
+  - copykat.load_gene_annotations

@@ -1,0 +1,44 @@
+id: copykat.dlm_smooth
+import_path: copykat.smoothing.dlm_smooth
+kind: function
+signature: "dlm_smooth(mat: np.ndarray, dV: float = 0.16, dW: float = 0.001,
+  n_cores: int = 1) -> np.ndarray"
+purpose: Apply a 1st-order polynomial dynamic linear model (Kalman filter +
+  RTS smoother) independently to each column of a matrix.
+description: >
+  Equivalent to R's dlm::dlmModPoly(order=1, dV=dV, dW=dW) followed by
+  dlm::dlmSmooth, run per-column. Each output column is mean-centered to
+  zero. This is the smoothing step (step 3) inside copykat()'s pipeline,
+  applied to the log-transformed, gene-centered expression matrix before
+  baseline detection.
+parameters:
+  - name: mat
+    type: np.ndarray
+    required: true
+    description: Matrix of shape (n_genes, n_cells); each column is smoothed
+      independently.
+  - name: dV
+    type: float
+    required: false
+    default: 0.16
+    description: Observation variance for the DLM.
+  - name: dW
+    type: float
+    required: false
+    default: 0.001
+    description: System (state evolution) variance for the DLM.
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Number of parallel workers (joblib) used across columns.
+mutates: "execution_class=pure_function; does not mutate mat; returns_kind=new_object"
+returns: np.ndarray, same shape as mat, each column smoothed and mean-centered
+  to zero.
+requires: []
+writes: []
+examples:
+  - norm_mat_smooth = copykat.dlm_smooth(norm_mat, dV=0.16, dW=0.001, n_cores=1)
+failure_fixes: []
+related:
+  - copykat.copykat

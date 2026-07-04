@@ -1,0 +1,36 @@
+id: copykat.load_gene_annotations
+import_path: copykat._data.load_gene_annotations
+kind: function
+signature: "load_gene_annotations(genome: str = 'hg20') -> pd.DataFrame"
+purpose: Load the bundled full gene annotation table (genomic coordinates, Ensembl
+  ID, symbol, cytoband) for hg38 (hg20) or mm10.
+description: >
+  Reads a bundled parquet resource. ``genome="hg20"`` (also accepts ``"hg38"``)
+  returns 56051 rows with an ``hgnc_symbol`` column; ``genome="mm10"`` returns
+  137030 rows with an ``mgi_symbol`` column instead. Any other value raises
+  ValueError. Used internally by ``annotate_genes`` and ``convert_to_bins``
+  (which hard-codes ``"hg20"``).
+parameters:
+  - name: genome
+    type: str
+    required: false
+    default: hg20
+    description: Genome build identifier -- "hg20"/"hg38" for human, "mm10"
+      for mouse.
+mutates: "execution_class=io; reads a bundled parquet resource file; returns_kind=new_object"
+returns: "pd.DataFrame with columns abspos, chromosome_name, start_position,
+  end_position, ensembl_gene_id, hgnc_symbol (hg20) or mgi_symbol (mm10), band."
+requires: []
+writes: []
+examples:
+  - anno = copykat.load_gene_annotations("hg20")
+  - anno_mm10 = copykat.load_gene_annotations("mm10")
+failure_fixes:
+  - when: "ValueError: Unsupported genome: '<value>'. Use 'hg20' or 'mm10'."
+    suggest:
+      - pass genome="hg20" (or "hg38") or genome="mm10"
+    explanation: only these two builds ship bundled annotation parquet files
+      in copykat/resources/.
+related:
+  - copykat.annotate_genes
+  - copykat.convert_to_bins

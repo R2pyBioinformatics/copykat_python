@@ -25,6 +25,8 @@ dependencies = [
 dev = ["pytest", "pytest-cov", "ruff"]
 docs = ["mkdocs", "mkdocstrings[python]", "mkdocs-material", "mkdocs-jupyter"]
 
+[project.entry-points."biobabel.manifest"]
+copykat = "copykat._biobabel:get_manifest"
 [tool.hatch.build.targets.sdist]
 include = ["copykat/", "tests/"]
 
@@ -33,3 +35,6 @@ packages = ["copykat"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.biobabel]
+contract_class = "analysis"

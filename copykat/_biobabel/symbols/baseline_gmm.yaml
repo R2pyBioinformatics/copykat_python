@@ -1,0 +1,69 @@
+id: copykat.baseline_gmm
+import_path: copykat.baseline.baseline_gmm
+kind: function
+signature: "baseline_gmm(cna_mat: np.ndarray, cell_names: list[str], max_normal:
+  int = 5, mu_cut: float = 0.05, nfraq_cut: float = 0.99, re_before: BaselineResult
+  | None = None, n_cores: int = 1) -> BaselineResult"
+purpose: Fallback diploid-cell detector used when baseline_norm_cl's clustering-based
+  call is unclassified.
+description: >
+  Scans cells in column order; for each cell fits a per-cell 3-component GMM
+  (means initialized at -0.2/0/0.2) on that cell's CNA profile. A component
+  with |mean| <= mu_cut is "neutral"; if the summed weight of neutral
+  components exceeds ``nfraq_cut``, the cell is called diploid. The scan stops
+  early once ``max_normal`` diploid cells are found. If more than 2 diploid
+  cells are found, the baseline is their mean profile with wns=""; otherwise
+  it falls back to ``re_before`` if supplied, else an overall-median baseline
+  with wns="unclassified.prediction". ``copykat()`` calls this only as a
+  second attempt, passing its own baseline_norm_cl result as ``re_before``.
+parameters:
+  - name: cna_mat
+    type: np.ndarray
+    required: true
+    description: CNA/expression matrix (n_genes, n_cells).
+  - name: cell_names
+    type: list[str]
+    required: true
+    description: Cell names corresponding to columns of cna_mat.
+  - name: max_normal
+    type: int
+    required: false
+    default: 5
+    description: Stop the per-cell scan after this many diploid cells are found.
+  - name: mu_cut
+    type: float
+    required: false
+    default: 0.05
+    description: Threshold on |component mean| to call a GMM component "neutral".
+  - name: nfraq_cut
+    type: float
+    required: false
+    default: 0.99
+    description: Minimum combined weight of neutral components to call a cell
+      diploid.
+  - name: re_before
+    type: BaselineResult | None
+    required: false
+    default: null
+    description: Prior BaselineResult to fall back to if fewer than 3 diploid
+      cells are found by this scan.
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Present for API parity with the R port; not used to parallelize
+      this function's own computation.
+mutates: "execution_class=pure_function; does not mutate cna_mat; returns_kind=new_object"
+returns: "BaselineResult; wns=\"\" when more than 2 diploid cells are found by
+  the GMM scan, otherwise falls back to re_before (if given) or an unclassified
+  median baseline."
+requires: []
+writes: []
+examples:
+  - result = copykat.baseline_gmm(norm_mat_smooth, cell_names, max_normal=5,
+    mu_cut=0.05, nfraq_cut=0.99, re_before=prior_result, n_cores=1)
+failure_fixes: []
+related:
+  - copykat.baseline_norm_cl
+  - copykat.BaselineResult
+  - copykat.copykat

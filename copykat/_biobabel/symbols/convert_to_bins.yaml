@@ -1,0 +1,56 @@
+id: copykat.convert_to_bins
+import_path: copykat.bins.convert_to_bins
+kind: function
+signature: "convert_to_bins(dna_mat: pd.DataFrame, rna_mat: pd.DataFrame, n_cores:
+  int = 1) -> BinConversionResult"
+purpose: Aggregate a gene-by-cell CNA matrix onto fixed-size (220KB) genomic
+  bins, imputing empty bins from the nearest bin with data.
+description: >
+  Drops chrom == 24 (MT) rows from ``dna_mat``. For each remaining bin, finds
+  genes (via the internally-loaded hg20 gene annotation table, regardless of
+  ``rna_mat``'s own genome) whose midpoint falls within the bin, then takes
+  the median expression of the genes shared between that set and
+  ``rna_mat``'s ``hgnc_symbol`` column. Bins with no matching genes are
+  filled from the nearest valid bin by index distance. This hard-codes hg20 /
+  human annotations and is only called by ``copykat()`` when
+  ``genome == "hg20"`` (mm10 stays in gene space and skips this step
+  entirely).
+parameters:
+  - name: dna_mat
+    type: pd.DataFrame
+    required: true
+    description: Genomic bin coordinates with columns chrom, chrompos, abspos
+      (e.g. from load_dna_bins()).
+  - name: rna_mat
+    type: pd.DataFrame
+    required: true
+    description: Annotated expression matrix (annotation columns + cell columns);
+      must include an hgnc_symbol column (e.g. from annotate_genes(..., genome="hg20")).
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Number of parallel workers (joblib) used to aggregate bins.
+mutates: "execution_class=pure_function; does not mutate dna_mat/rna_mat; returns_kind=new_object"
+returns: >-
+  BinConversionResult(dna_adj: dna_mat with chrom==24 (MT) rows dropped,
+  rna_adj: chrom/chrompos/abspos columns plus one column per cell, bin-aggregated
+  via per-bin gene median with nearest-neighbor imputation for bins with no
+  matching genes).
+requires: []
+writes: []
+examples:
+  - result = copykat.convert_to_bins(dna_bins, rna_copycat, n_cores=1)
+failure_fixes:
+  - when: rna_mat has no 'hgnc_symbol' column
+    suggest:
+      - pass a matrix produced by annotate_genes(..., genome="hg20"), which
+        always includes hgnc_symbol
+    explanation: convert_to_bins hard-codes hg20 gene annotations and the hgnc_symbol
+      column; it silently produces all-zero output for bins if gene_symbols
+      is None (hgnc_symbol column absent), since no genes ever match.
+related:
+  - copykat.BinConversionResult
+  - copykat.copykat
+  - copykat.annotate_genes
+  - copykat.load_dna_bins

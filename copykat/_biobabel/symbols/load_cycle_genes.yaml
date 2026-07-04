@@ -1,0 +1,21 @@
+id: copykat.load_cycle_genes
+import_path: copykat._data.load_cycle_genes
+kind: function
+signature: "load_cycle_genes() -> list[str]"
+purpose: Load the bundled list of cell-cycle gene symbols that copykat() excludes
+  from hg20 analyses.
+description: >
+  Reads a bundled parquet resource of 1316 HGNC gene symbols. Inside
+  ``copykat()``, these genes (together with any ``HLA-``-prefixed genes) are
+  removed from ``anno_mat`` before segmentation, but only when
+  ``genome == "hg20"`` -- this exclusion step is skipped entirely for mm10.
+parameters: []
+mutates: "execution_class=io; reads a bundled parquet resource file; returns_kind=new_object"
+returns: "list[str] of 1316 HGNC gene symbols."
+requires: []
+writes: []
+examples:
+  - cycle_genes = copykat.load_cycle_genes()
+failure_fixes: []
+related:
+  - copykat.copykat

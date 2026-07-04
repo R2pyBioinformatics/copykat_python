@@ -1,0 +1,20 @@
+id: copykat.load_dna_bins
+import_path: copykat._data.load_dna_bins
+kind: function
+signature: "load_dna_bins() -> pd.DataFrame"
+purpose: Load the bundled 220KB fixed genomic bin coordinate table for hg38.
+description: >
+  Reads a bundled parquet resource with 12205 bins covering the autosomes and
+  X chromosome (chrom code 24 / MT is dropped later by ``convert_to_bins``,
+  not here). Used as the ``dna_mat`` argument to ``convert_to_bins`` and only
+  applies to the hg20/hg38 genome build.
+parameters: []
+mutates: "execution_class=io; reads a bundled parquet resource file; returns_kind=new_object"
+returns: "pd.DataFrame with columns chrom, chrompos, abspos; 12205 rows."
+requires: []
+writes: []
+examples:
+  - dna_bins = copykat.load_dna_bins()
+failure_fixes: []
+related:
+  - copykat.convert_to_bins

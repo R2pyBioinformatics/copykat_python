@@ -1,0 +1,90 @@
+id: copykat.cna_inference_and_heatmap
+title: Infer copy number aberrations and render the CNA heatmap
+description: >
+  The core CopyKAT recipe demonstrated end-to-end in the package tutorial:
+  load (or supply) a raw UMI count matrix, run the single-call copykat()
+  pipeline to get per-cell diploid/aneuploid predictions plus a genome-wide
+  CNA matrix, then render the CNA heatmap with heatmap3() annotated by
+  chromosome and by prediction. copykat() itself is a single DataFrame ->
+  Result step (not a multi-stage state machine you drive yourself) -- the
+  only externally-chained state here is its result feeding into heatmap3().
+task_tags:
+  - cna-calling
+  - aneuploidy-detection
+  - cna-heatmap
+when_to_use:
+  - you have a raw (unnormalized) scRNA-seq UMI count matrix and want per-cell
+    tumor/normal calls plus a genome-wide CNA heatmap
+  - you want to reproduce the package's own tutorial end-to-end
+when_not_to_use:
+  - you already have a CopykatResult from a prior copykat() call and only
+    need to re-visualize a cell subset (e.g. tumor subclones) -- call
+    copykat.heatmap3 again directly on a filtered/re-clustered subset of
+    result.CNAmat instead of re-running this workflow
+  - your data is not a raw UMI/count matrix (e.g. already normalized or log-transformed)
+inputs:
+  - name: chr_colors
+    kind: np.ndarray
+    description: Column side-color array for heatmap3, one color per CNAmat
+      bin, typically alternating by chromosome (e.g. built from CNAmat["chrom"]
+      % 2).
+    requirements:
+      - length equal to the number of bins/columns in the CNA matrix passed
+        to heatmap3
+  - name: pred_colors
+    kind: np.ndarray
+    description: Row side-color array for heatmap3, one color per cell, typically
+      derived from result.prediction["copykat.pred"] (e.g. orange for aneuploid,
+      teal for diploid).
+    requirements:
+      - length equal to the number of cells (rows) in the matrix passed to
+        heatmap3
+steps:
+  - symbol: copykat.load_example_data
+    purpose: Load the bundled example raw UMI matrix (substitute your own data
+      instead of this step for real analyses).
+    args: {}
+    notes:
+      - Optional starting point -- substitute any raw UMI DataFrame with genes
+        as rows and cells as columns.
+  - symbol: copykat.copykat
+    purpose: Run the CopyKAT pipeline to classify cells and produce the CNA
+      matrix.
+    args:
+      rawmat: $steps.copykat.load_example_data.output
+      id_type: S
+      cell_line: "no"
+      ngene_chr: 5
+      win_size: 25
+      KS_cut: 0.2
+      distance: euclidean
+      n_cores: 4
+    notes:
+      - The tutorial uses n_cores=4; use n_cores=1 for small/synthetic smoke
+        runs.
+  - symbol: copykat.heatmap3
+    purpose: Render the CNA heatmap for all surviving cells, colored by chromosome
+      (columns) and by diploid/aneuploid prediction (rows).
+    args:
+      x: $steps.copykat.copykat.output
+      row_cluster: true
+      col_cluster: false
+      dist_func: euclidean
+      link_method: ward.D2
+      col_side_colors: $inputs.chr_colors
+      row_side_colors: $inputs.pred_colors
+      cmap: RdBu_r
+      dendrogram_: row
+      show: true
+    notes:
+      - "x is not literally the CopykatResult -- select the CNAmat cell columns
+        (excluding chrom/chrompos/abspos) and transpose to (cells, bins)
+        before calling heatmap3; chr_colors/pred_colors are built with plain
+        pandas/numpy from CNAmat['chrom'] and prediction['copykat.pred'], not
+        by a copykat symbol."
+templates:
+  - copykat.cna_inference_and_heatmap_template
+outputs:
+  - result.prediction
+  - result.cna_matrix
+  - heatmap row/column leaf order and dendrograms (heatmap3's returned dict)

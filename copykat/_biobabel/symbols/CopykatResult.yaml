@@ -1,0 +1,42 @@
+id: copykat.CopykatResult
+import_path: copykat.copykat.CopykatResult
+kind: class
+signature: "CopykatResult(prediction: pd.DataFrame, CNAmat: pd.DataFrame, hclustering:
+  Any)"
+purpose: Dataclass holding the output of the copykat() pipeline -- per-cell
+  prediction, per-bin/gene copy number matrix, and clustering linkage.
+description: >
+  Plain @dataclass, all three fields required. When copykat() is run with
+  ``cell_line="yes"``, ``prediction`` is returned as an empty DataFrame (the
+  diploid/aneuploid classification step is skipped for pure cell-line data)
+  and ``CNAmat`` is the unadjusted bin matrix rather than the
+  baseline-adjusted one.
+parameters:
+  - name: prediction
+    type: pd.DataFrame
+    required: true
+    description: Cell-level predictions with columns "cell.names" and "copykat.pred"
+      (values in diploid, aneuploid, not.defined, c1:diploid:low.conf, c2:aneuploid:low.conf);
+      empty when cell_line="yes".
+  - name: CNAmat
+    type: pd.DataFrame
+    required: true
+    description: Copy number matrix -- 220KB bin resolution (hg20) or gene
+      resolution (mm10). First 3 columns (chrom, chrompos, abspos) are genomic
+      coordinates, followed by one column per cell.
+  - name: hclustering
+    type: Any
+    required: true
+    description: SciPy hierarchical clustering linkage matrix from the final
+      diploid/aneuploid split (or, in cell_line="yes" mode, from the single
+      clustering pass).
+mutates: "execution_class=data_container; immutable dataclass instance; returns_kind=new_object"
+returns: ""
+requires: []
+writes: []
+examples:
+  - result.prediction; result.CNAmat; result.hclustering
+failure_fixes: []
+related:
+  - copykat.copykat
+  - copykat.heatmap3

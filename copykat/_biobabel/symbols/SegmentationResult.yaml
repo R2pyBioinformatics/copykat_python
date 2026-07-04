@@ -1,0 +1,26 @@
+id: copykat.SegmentationResult
+import_path: copykat.segmentation.SegmentationResult
+kind: class
+signature: "SegmentationResult(log_cna: np.ndarray, breaks: np.ndarray)"
+purpose: Dataclass returned by cna_mcmc holding the segmented log-space copy
+  number matrix and breakpoint positions.
+description: Plain @dataclass, both fields required.
+parameters:
+  - name: log_cna
+    type: np.ndarray
+    required: true
+    description: Segmented copy number matrix in log space (n_genes, n_cells).
+  - name: breaks
+    type: np.ndarray
+    required: true
+    description: Breakpoint positions, 1-indexed (R convention), always includes
+      1 and n.
+mutates: "execution_class=data_container; immutable dataclass instance; returns_kind=new_object"
+returns: ""
+requires: []
+writes: []
+examples:
+  - result.log_cna; result.breaks
+failure_fixes: []
+related:
+  - copykat.cna_mcmc

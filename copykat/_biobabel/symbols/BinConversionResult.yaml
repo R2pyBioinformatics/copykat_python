@@ -1,0 +1,27 @@
+id: copykat.BinConversionResult
+import_path: copykat.bins.BinConversionResult
+kind: class
+signature: "BinConversionResult(dna_adj: pd.DataFrame, rna_adj: pd.DataFrame)"
+purpose: Dataclass returned by convert_to_bins holding the adjusted DNA bin
+  coordinates and bin-resolution RNA expression.
+description: Plain @dataclass, both fields required.
+parameters:
+  - name: dna_adj
+    type: pd.DataFrame
+    required: true
+    description: Adjusted DNA bin coordinate DataFrame (chrom, chrompos, abspos;
+      MT/chrom 24 excluded).
+  - name: rna_adj
+    type: pd.DataFrame
+    required: true
+    description: Adjusted RNA expression at bin resolution, with chrom/chrompos/abspos
+      columns followed by one column per cell.
+mutates: "execution_class=data_container; immutable dataclass instance; returns_kind=new_object"
+returns: ""
+requires: []
+writes: []
+examples:
+  - result.dna_adj; result.rna_adj
+failure_fixes: []
+related:
+  - copykat.convert_to_bins

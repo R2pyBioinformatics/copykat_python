@@ -1,0 +1,154 @@
+id: copykat.heatmap3
+import_path: copykat.heatmap.heatmap3
+kind: function
+signature: "heatmap3(x: np.ndarray, *, row_cluster: bool = True, col_cluster:
+  bool = False, dist_func: str = 'euclidean', link_method: str = 'ward.D2',
+  col_side_colors: np.ndarray | None = None, row_side_colors: np.ndarray |
+  None = None, cmap: Any = 'RdBu_r', vmin: float | None = None, vmax: float
+  | None = None, breaks: np.ndarray | None = None, dendrogram_: str = 'row',
+  key: bool = True, figsize: tuple[float, float] = (10, 10), save_path: str
+  | None = None, show: bool = False, use_raster: bool = True, interpolate:
+  bool = False) -> dict[str, Any]"
+purpose: Render a clustered heatmap with optional dendrograms and categorical
+  side-color annotation tracks -- the standard CopyKAT CNA visualization.
+description: >
+  pheatmap-python backed (not matplotlib). ``link_method="ward"`` is treated
+  as an alias for ``"ward.D2"`` (SciPy/R-vignette convention), not
+  pheatmap's/R hclust's legacy ``"ward.D"`` semantics for the bare string.
+  ``row_side_colors``/``col_side_colors`` accept (n,), (n,k) or (k,n) color
+  arrays; duplicate tracks (the R copykat convention of doubling a 1-D vector
+  via cbind/rbind for a visually thicker band) are deduplicated to one track.
+  When ``breaks`` is omitted, a symmetric linear scale is built from
+  vmin/vmax or from the data's max absolute value. ``use_raster=True``
+  (default) embeds the heatmap body as a raster image to keep saved PDF size
+  bounded for copykat-scale matrices (millions of cells); dendrograms,
+  annotations and the legend stay vector. ``show=True`` renders inline via
+  IPython.display at the requested figsize (not just the file-output
+  width/height). The returned dict only contains
+  row_dendrogram/col_dendrogram keys for axes that were actually clustered.
+parameters:
+  - name: x
+    type: np.ndarray
+    required: true
+    description: Data matrix (rows x columns) to render.
+  - name: row_cluster
+    type: bool
+    required: false
+    default: true
+    description: Toggle hierarchical clustering on rows.
+  - name: col_cluster
+    type: bool
+    required: false
+    default: false
+    description: Toggle hierarchical clustering on columns.
+  - name: dist_func
+    type: str
+    required: false
+    default: euclidean
+    description: "Distance metric (R/pheatmap convention: 'euclidean', 'correlation',
+      'manhattan', ...)."
+  - name: link_method
+    type: str
+    required: false
+    default: ward.D2
+    description: "Linkage method ('ward.D', 'ward.D2', 'complete', ...); 'ward'
+      is accepted as an alias for 'ward.D2'."
+  - name: col_side_colors
+    type: np.ndarray | None
+    required: false
+    default: null
+    description: Color string array for column annotation track(s).
+  - name: row_side_colors
+    type: np.ndarray | None
+    required: false
+    default: null
+    description: Color string array for row annotation track(s).
+  - name: cmap
+    type: Any
+    required: false
+    default: RdBu_r
+    description: Colormap spec -- an RColorBrewer name (optionally "_r"-suffixed
+      to reverse) or an explicit list of hex/named colors.
+  - name: vmin
+    type: float | None
+    required: false
+    default: null
+    description: Used with vmax to build a default linear breaks range if breaks
+      is omitted.
+  - name: vmax
+    type: float | None
+    required: false
+    default: null
+    description: See vmin.
+  - name: breaks
+    type: np.ndarray | None
+    required: false
+    default: null
+    description: Custom color break points (length n_colors + 1).
+  - name: dendrogram_
+    type: str
+    required: false
+    default: row
+    description: Which dendrogram(s) to render -- "row", "column", "both", "none".
+  - name: key
+    type: bool
+    required: false
+    default: true
+    description: Whether to draw the color legend.
+  - name: figsize
+    type: tuple[float, float]
+    required: false
+    default: (10, 10)
+    description: (width, height) in inches -- controls both inline display
+      and saved-file size.
+  - name: save_path
+    type: str | None
+    required: false
+    default: null
+    description: If provided, saves the figure to this path (PDF/PNG inferred
+      from suffix).
+  - name: show
+    type: bool
+    required: false
+    default: false
+    description: If True, renders inline via IPython display.
+  - name: use_raster
+    type: bool
+    required: false
+    default: true
+    description: Embed the heatmap body as a single raster image to bound file
+      size.
+  - name: interpolate
+    type: bool
+    required: false
+    default: false
+    description: Bilinear interpolation when use_raster is True; default is
+      nearest-neighbour.
+mutates: "execution_class=builder; does not mutate x; writes a file to save_path
+  when provided; returns_kind=new_object"
+returns: >-
+  dict always containing row_order/col_order (0-based leaf orderings, or
+  np.arange(n) when clustering is disabled on that axis); adds
+  row_dendrogram/col_dendrogram (SciPy linkage matrices) only when clustering
+  was performed on that axis.
+requires: []
+writes: []
+examples:
+  - "result = copykat.heatmap3(cna_values, row_cluster=True, col_cluster=False,
+    dist_func='euclidean', link_method='ward.D2', col_side_colors=col_side,
+    row_side_colors=row_side, cmap='RdBu_r', breaks=col_breaks, dendrogram_='row',
+    figsize=(9, 4), show=True)"
+  - "# Re-visualize a subset (e.g. aneuploid-only cells) to inspect subclones:
+    call heatmap3 again on tumor_mat.T (a filtered, re-clustered subset of a
+    prior CopykatResult.CNAmat) with new row_side_colors built from an
+    independent fcluster() split -- no copykat symbol is needed for the
+    filtering/re-clustering step itself."
+failure_fixes:
+  - when: "ValueError: <axis>_side_colors length ... != number of <axis>s ..."
+    suggest:
+      - ensure row_side_colors has one entry per row of x (or one column per
+        row for a 2-D array) and col_side_colors one entry per column of x
+    explanation: raised by the internal _normalize_side helper when the side-color
+      array's row/column count doesn't match x's shape.
+related:
+  - copykat.copykat

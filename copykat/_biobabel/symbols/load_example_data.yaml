@@ -1,0 +1,35 @@
+id: copykat.load_example_data
+import_path: copykat._data.load_example_data
+kind: function
+signature: "load_example_data() -> pd.DataFrame"
+purpose: Load the bundled example breast-tumor scRNA-seq UMI count matrix, downloading
+  and caching it on first use.
+description: >
+  Loads a 33694-gene x 302-cell raw UMI count matrix (genes as rows, cells as
+  columns; row index name "gene"). Resolution order is local staging, then
+  ``~/.cache/copykat_py/``, then a download from the registered Zenodo URL
+  (see ``copykat._download.resolve_data_path`` / ``copykat._registry.REGISTRY``).
+  This is the canonical starting point for the ``copykat()`` pipeline used in
+  the package's own tutorial.
+parameters: []
+mutates: "execution_class=io; may write a cached file under ~/.cache/copykat_py/
+  on first call and requires network access to zenodo.org if not already cached;
+  returns_kind=new_object"
+returns: "pd.DataFrame: 33694 genes (rows, index.name == 'gene') x 302 cells
+  (columns), raw UMI counts."
+requires: []
+writes:
+  - input.raw_matrix
+examples:
+  - rawdata = copykat.load_example_data()
+failure_fixes:
+  - when: network unavailable and the file is not already cached under ~/.cache/copykat_py/
+    suggest:
+      - pre-populate ~/.cache/copykat_py/exp_rawdata.tsv.gz manually (e.g. via
+        an offline transfer) before calling
+      - supply your own raw UMI DataFrame to copykat(rawmat=...) instead of load_example_data()
+    explanation: resolve_data_path only has two sources -- the local cache and
+      a Zenodo download URL -- and raises/propagates network errors if neither
+      succeeds.
+related:
+  - copykat.copykat

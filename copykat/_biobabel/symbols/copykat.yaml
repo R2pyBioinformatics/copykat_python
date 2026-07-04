@@ -1,0 +1,179 @@
+id: copykat.copykat
+import_path: copykat.copykat.copykat
+kind: function
+signature: "copykat(rawmat: pd.DataFrame, id_type: str = 'S', cell_line: str
+  = 'no', ngene_chr: int = 5, min_gene_per_cell: int = 200, LOW_DR: float =
+  0.05, UP_DR: float = 0.1, win_size: int = 25, norm_cell_names: list[str]
+  | None = None, KS_cut: float = 0.1, sam_name: str = '', distance: str =
+  'euclidean', output_seg: bool = False, plot_genes: bool = True, genome:
+  str = 'hg20', n_cores: int = 1) -> CopykatResult"
+purpose: Run the full CopyKAT pipeline -- infer per-cell copy number profiles
+  and classify cells as diploid (normal) or aneuploid (tumor) from a raw scRNA-seq
+  UMI count matrix.
+description: >
+  Single-call, single-step analysis: takes one raw expression DataFrame and
+  returns one CopykatResult. Internally it chains cell/gene filtering,
+  annotate_genes, dlm_smooth, one of baseline_norm_cl/baseline_gmm/baseline_synthetic,
+  cna_mcmc, and (for genome="hg20") convert_to_bins, but these internal calls
+  use plain numpy arrays with parameters shaped for this pipeline (not the
+  same DataFrames a caller passes in) -- they are not meant to be chained
+  externally to reproduce this call; use the other public functions directly
+  only for custom/alternative pipelines. ``output_seg`` and ``plot_genes``
+  are accepted for R-API parity but are not implemented (no IGV .seg file is
+  written and plot_genes has no effect); heatmap rendering is a separate,
+  explicit call to ``heatmap3`` on the returned CNAmat. When
+  ``cell_line="yes"``, ``result.prediction`` is empty and the function
+  returns early after bin conversion (no diploid/aneuploid classification).
+  If fewer than 25 segmentation breakpoints are found, KS_cut is
+  automatically halved then quartered (cna_mcmc is re-run up to twice more)
+  before raising.
+parameters:
+  - name: rawmat
+    type: pd.DataFrame
+    required: true
+    description: Raw gene expression (UMI count) matrix, genes as rows, cells
+      as columns; row index is gene identifiers.
+  - name: id_type
+    type: str
+    required: false
+    default: S
+    description: "'S' for gene symbols, 'E' for Ensembl IDs."
+  - name: cell_line
+    type: str
+    required: false
+    default: "no"
+    description: "'yes' for pure cell line data (skips diploid/aneuploid classification),
+      'no' for tissue samples."
+  - name: ngene_chr
+    type: int
+    required: false
+    default: 5
+    description: Minimum number of genes per chromosome for cell filtering.
+  - name: min_gene_per_cell
+    type: int
+    required: false
+    default: 200
+    description: Minimum genes detected per cell.
+  - name: LOW_DR
+    type: float
+    required: false
+    default: 0.05
+    description: Minimum gene detection rate for the initial gene filter (before
+      smoothing).
+  - name: UP_DR
+    type: float
+    required: false
+    default: 0.1
+    description: Minimum gene detection rate for the segmentation gene subset;
+      forced equal to LOW_DR when fewer than 7000 genes remain ("low data
+      quality" warning).
+  - name: win_size
+    type: int
+    required: false
+    default: 25
+    description: Window size (genes per segment) for segmentation.
+  - name: norm_cell_names
+    type: list[str] | None
+    required: false
+    default: null
+    description: Known normal cell names to use as the baseline directly,
+      bypassing auto-detection; must have length > 1.
+  - name: KS_cut
+    type: float
+    required: false
+    default: 0.1
+    description: KS-test cutoff for breakpoint detection (0-1, higher = fewer
+      breakpoints); auto-relaxed to 50% then 25% of this value if too few
+      breakpoints are found.
+  - name: sam_name
+    type: str
+    required: false
+    default: ""
+    description: Sample name prefix (used only to build an internal print label;
+      no files are written).
+  - name: distance
+    type: str
+    required: false
+    default: euclidean
+    description: "Distance metric for clustering: 'euclidean', 'pearson', or
+      'spearman' -- non-euclidean uses 1 - correlation as the distance."
+  - name: output_seg
+    type: bool
+    required: false
+    default: false
+    description: Accepted for R-API parity; NOT implemented (no IGV .seg output
+      is produced).
+  - name: plot_genes
+    type: bool
+    required: false
+    default: true
+    description: Accepted for R-API parity; NOT implemented (has no effect
+      on output).
+  - name: genome
+    type: str
+    required: false
+    default: hg20
+    description: "'hg20' (220KB bin-resolution output via convert_to_bins) or
+      'mm10' (gene-resolution output, no bin conversion)."
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Number of parallel workers (joblib) used in the smoothing
+      and segmentation steps.
+mutates: "execution_class=pipeline; does not mutate rawmat in place (filtered
+  copies are made internally); prints step-by-step progress to stdout; seeds
+  np.random with 1234 at entry; returns_kind=new_object"
+returns: >-
+  CopykatResult with .prediction (DataFrame: cell.names, copykat.pred in
+  {diploid, aneuploid, not.defined, c1:diploid:low.conf, c2:aneuploid:low.conf};
+  empty when cell_line="yes"), .CNAmat (DataFrame: chrom/chrompos/abspos +
+  one column per surviving cell, 220KB-bin resolution for hg20 or gene
+  resolution for mm10), .hclustering (SciPy linkage matrix from the final
+  hierarchical clustering).
+requires:
+  - input.raw_matrix
+writes:
+  - result.prediction
+  - result.cna_matrix
+  - result.hclustering
+examples:
+  - "result = copykat.copykat(rawmat=exp_rawdata, id_type='S', cell_line='no',
+    ngene_chr=5, win_size=25, KS_cut=0.2, sam_name='test', distance='euclidean',
+    n_cores=1)"
+failure_fixes:
+  - when: "ValueError: No cells have more than min_gene_per_cell genes"
+    suggest:
+      - lower min_gene_per_cell
+      - verify rawmat has genes as rows and cells as columns (not transposed)
+    explanation: raised in step 1 when every cell's detected-gene count is
+      below min_gene_per_cell.
+  - when: "ValueError: All cells are filtered out"
+    suggest:
+      - lower ngene_chr
+      - check that gene identifiers match id_type/genome so annotate_genes
+        retains enough genes per chromosome for the coverage filter to pass
+    explanation: raised when the per-chromosome gene-coverage filter (_filter_cells_by_chr)
+      removes every remaining cell.
+  - when: "ValueError: Too few segments; try decreasing KS.cut or improving
+      data quality"
+    suggest:
+      - lower KS_cut
+      - supply more genes/cells so UP_DR filtering retains a larger gene set
+    explanation: cna_mcmc found fewer than 25 breakpoints even after copykat
+      auto-relaxed KS_cut to 50% then 25% of its original value.
+  - when: "ValueError: Known normal cells provided but none found in dataset"
+    suggest:
+      - verify norm_cell_names exactly match rawmat.columns
+      - omit norm_cell_names to let copykat auto-detect the diploid baseline
+    explanation: raised when norm_cell_names is supplied but has no overlap
+      with the surviving cell columns.
+  - when: "ValueError: Unsupported genome: <value>"
+    suggest:
+      - use genome="hg20" or genome="mm10"
+    explanation: only these two builds are supported (checked at the final
+      genome branch and inside load_gene_annotations/load_dna_bins).
+related:
+  - copykat.CopykatResult
+  - copykat.load_example_data
+  - copykat.heatmap3

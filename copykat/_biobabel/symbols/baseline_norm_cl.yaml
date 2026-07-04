@@ -1,0 +1,55 @@
+id: copykat.baseline_norm_cl
+import_path: copykat.baseline.baseline_norm_cl
+kind: function
+signature: "baseline_norm_cl(norm_mat_smooth: np.ndarray, cell_names: list[str],
+  min_cells: int = 5, n_cores: int = 1) -> BaselineResult"
+purpose: Auto-detect a cluster of diploid (normal) cells from a smoothed, normalized
+  expression matrix, without any prior knowledge of which cells are normal.
+description: >
+  Ward (ward.D2-equivalent) hierarchical clustering into up to 6 clusters,
+  reduced (km -= 1) until every cluster has at least ``min_cells`` members or
+  km reaches 2. Each cluster's per-gene median profile is fit with a
+  3-component GMM (matching R's mixtools::normalmixEM with arbvar=FALSE) to
+  estimate a spread ``sigma``; the cluster with the smallest sigma is selected
+  as the diploid baseline. A silhouette score (2-cluster split) and an F-test
+  on the per-cluster sigmas jointly determine the ``wns`` confidence flag.
+  This is one of two auto-detection strategies ``copykat()`` uses when
+  ``norm_cell_names`` is not supplied and ``cell_line != "yes"``; if ``wns ==
+  "unclassified.prediction"``, copykat() falls back to ``baseline_gmm``.
+parameters:
+  - name: norm_mat_smooth
+    type: np.ndarray
+    required: true
+    description: Smoothed, normalized expression matrix (n_genes, n_cells).
+  - name: cell_names
+    type: list[str]
+    required: true
+    description: Cell names corresponding to columns of norm_mat_smooth.
+  - name: min_cells
+    type: int
+    required: false
+    default: 5
+    description: Minimum cells required per cluster.
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Present for API parity with the R port; not used to parallelize
+      this function's own computation.
+mutates: "execution_class=pure_function; does not mutate norm_mat_smooth; returns_kind=new_object"
+returns: >-
+  BaselineResult(basel: per-gene diploid baseline profile (median of the
+  selected cluster), wns: "" when confident or "unclassified.prediction" when
+  the 2-cluster silhouette mean <= 0.15, any cluster has fewer than min_cells
+  members, or the GMM-sigma F-test p-value > 0.05, pre_n: names of cells in
+  the selected diploid cluster, cl: cluster label (1-indexed) per cell).
+requires: []
+writes: []
+examples:
+  - result = copykat.baseline_norm_cl(norm_mat_smooth, cell_names, min_cells=5,
+    n_cores=1)
+failure_fixes: []
+related:
+  - copykat.baseline_gmm
+  - copykat.BaselineResult
+  - copykat.copykat

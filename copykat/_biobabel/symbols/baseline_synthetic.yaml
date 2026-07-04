@@ -1,0 +1,53 @@
+id: copykat.baseline_synthetic
+import_path: copykat.baseline.baseline_synthetic
+kind: function
+signature: "baseline_synthetic(norm_mat: np.ndarray, cell_names: list[str],
+  min_cells: int = 10, n_cores: int = 1) -> tuple[np.ndarray, np.ndarray, np.ndarray]"
+purpose: Estimate a synthetic diploid baseline per cluster for pure cell-line
+  data (copykat()'s cell_line="yes" mode).
+description: >
+  Ward-clusters cells (reduced until every cluster has >= min_cells members
+  or km reaches 2, same scheme as baseline_norm_cl). For each cluster, draws
+  one synthetic-normal value per gene from N(0, per-gene sample sd of that
+  cluster) using a fixed seed (RandomState(123), matching R's
+  set.seed(123)), then subtracts it from every cell in that cluster.
+  IMPORTANT: the first return value's rows are grouped and ordered by cluster
+  membership, NOT by the original cell_names column order; only the third
+  return value (cl) preserves the original column order. copykat() relies on
+  this exact behavior when it transposes the first return value back to
+  (n_genes, n_cells) for the cell_line="yes" pipeline branch.
+parameters:
+  - name: norm_mat
+    type: np.ndarray
+    required: true
+    description: Normalized expression matrix (n_genes, n_cells).
+  - name: cell_names
+    type: list[str]
+    required: true
+    description: Cell names corresponding to columns of norm_mat.
+  - name: min_cells
+    type: int
+    required: false
+    default: 10
+    description: Minimum cells required per cluster.
+  - name: n_cores
+    type: int
+    required: false
+    default: 1
+    description: Present for API parity with the R port; not used to parallelize
+      this function's own computation.
+mutates: "execution_class=pure_function; does not mutate norm_mat; returns_kind=new_object"
+returns: >-
+  tuple(expr_relat: (n_cells, n_genes) relative-expression matrix with rows
+  ordered by cluster -- not by the input cell_names order --, syn_normal:
+  (n_genes, n_clusters) synthetic baseline profile per cluster, cl: cluster
+  label per cell, 1-indexed, in the original cell_names column order).
+requires: []
+writes: []
+examples:
+  - expr_relat, syn_normal, cl = copykat.baseline_synthetic(norm_mat_smooth,
+    cell_names, min_cells=10, n_cores=1)
+failure_fixes: []
+related:
+  - copykat.BaselineResult
+  - copykat.copykat
