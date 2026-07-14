@@ -14,41 +14,7 @@ r_package:
   repo: https://github.com/navinlabcode/copykat
   version_or_commit: b7a4763
   fidelity: partial
-capabilities:
-  - cna_inference
-  - tumor_normal_cell_classification
-  - subclone_detection
-  - cna_heatmap_visualization
-  - gene_to_genomic_bin_conversion
-  - gene_coordinate_annotation
-domain_tags:
-  - single-cell-rna-seq
-  - copy-number-variation
-  - cancer-genomics
-  - tumor-heterogeneity
-task_tags:
-  - cna-calling
-  - aneuploidy-detection
-  - tumor-cell-classification
-  - subclone-analysis
-  - cna-heatmap
 foundation: []
-triggers:
-  - infer copy number aberrations (CNA) from single-cell RNA-seq
-  - distinguish tumor (aneuploid) cells from normal (diploid) cells in scRNA-seq
-  - detect aneuploidy or genomic instability from scRNA-seq expression data
-  - identify tumor subclones from single-cell copy number profiles
-  - render a CNA heatmap for single-cell RNA-seq
-not_when:
-  - "input is not a raw UMI/count matrix (e.g. already log-normalized or scaled
-    expression) -- copykat's own log/sqrt normalization assumes raw counts"
-  - genome build is not human hg38 (hg20) or mouse mm10 -- no other species or
-    builds are supported by the bundled gene annotations
-  - copy number is needed from bulk RNA-seq, WGS, or WES -- use a DNA-based CNV
-    caller instead
-  - dataset has fewer than a few hundred genes detected per cell or too few
-    cells to form a diploid baseline cluster (min_gene_per_cell, ngene_chr
-    filters will remove most/all cells)
 templates:
   - id: copykat.cna_inference_and_heatmap_template
     path: templates/cna_inference_and_heatmap.py
